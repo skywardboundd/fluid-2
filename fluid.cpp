@@ -7,6 +7,8 @@ constexpr size_t N = 36, M = 84;
 constexpr size_t T = 1'000'000;
 constexpr std::array<pair<int, int>, 4> deltas{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}};
 
+constexpr size_t s_N = 32, s_K = 16;
+
 // char field[N][M + 1] = {
 //     "#####",
 //     "#.  #",
@@ -63,77 +65,88 @@ char t_field[N][M + 1] = {
     "####################################################################################",
 };
 
-struct Fixed {
-    constexpr Fixed(int v): v(v << 16) {}
-    constexpr Fixed(float f): v(f * (1 << 16)) {}
-    constexpr Fixed(double f): v(f * (1 << 16)) {}
-    constexpr Fixed(): v(0) {}
+template <int N, int K>
+class Fixed {
+public:
+    constexpr Fixed() : value(0) {}
+    constexpr Fixed(double d) : value(static_cast<int64_t>(d * (1LL << K))) {}
 
-    static constexpr Fixed from_raw(int32_t x) {
-        Fixed ret;
-        ret.v = x;
-        return ret;
-    } 
+    static constexpr Fixed from_raw(int64_t raw) {
+        Fixed f;
+        f.value = raw;
+        return f;
+    }
 
-    int32_t v;
+    double to_double() const {
+        return static_cast<double>(value) / (1LL << K);
+    }
 
-    auto operator<=>(const Fixed&) const = default;
-    bool operator==(const Fixed&) const = default;
+    constexpr Fixed operator+(Fixed other) const {
+        return Fixed::from_raw(value + other.value);
+    }
+
+    constexpr Fixed operator-(Fixed other) const {
+        return Fixed::from_raw(value - other.value);
+    }
+
+    constexpr Fixed operator*(Fixed other) const {
+        return Fixed::from_raw((value * other.value) >> K);
+    }
+
+    constexpr Fixed operator/(Fixed other) const {
+        return Fixed::from_raw((value << K) / other.value);
+    }
+
+    Fixed& operator+=(Fixed other) {
+        value += other.value;
+        return *this;
+    }
+
+    Fixed& operator-=(Fixed other) {
+        value -= other.value;
+        return *this;
+    }
+
+    Fixed& operator*=(Fixed other) {
+        value = (value * other.value) >> K;
+        return *this;
+    }
+
+    Fixed& operator/=(Fixed other) {
+        value = (value << K) / other.value;
+        return *this;
+    }
+
+
+    constexpr bool operator==(const Fixed& other) const = default;
+
+    constexpr auto operator<=>(const Fixed& other) const = default;
+
+private:
+    int64_t value; // Внутреннее представление
 };
 
-static constexpr Fixed inf = Fixed::from_raw(std::numeric_limits<int32_t>::max());
-static constexpr Fixed eps = Fixed::from_raw(deltas.size());
 
-Fixed operator+(Fixed a, Fixed b) {
-    return Fixed::from_raw(a.v + b.v);
+template <int N, int K>
+std::ostream& operator<<(std::ostream& os, const Fixed<N, K>& f) {
+    return os << f.to_double();
 }
 
-Fixed operator-(Fixed a, Fixed b) {
-    return Fixed::from_raw(a.v - b.v);
+template <int N, int K>
+constexpr Fixed<N, K> inf = Fixed<N, K>::from_raw(std::numeric_limits<int64_t>::max());
+
+template <int N, int K>
+constexpr Fixed<N, K> eps = Fixed<N, K>::from_raw(1);
+
+template <int N, int K>
+Fixed<N, K> abs(Fixed<N, K> x) {
+    return x.value < 0 ? Fixed<N, K>::from_raw(-x.value) : x;
 }
 
-Fixed operator*(Fixed a, Fixed b) {
-    return Fixed::from_raw(((int64_t) a.v * b.v) >> 16);
-}
-
-Fixed operator/(Fixed a, Fixed b) {
-    return Fixed::from_raw(((int64_t) a.v << 16) / b.v);
-}
-
-Fixed &operator+=(Fixed &a, Fixed b) {
-    return a = a + b;
-}
-
-Fixed &operator-=(Fixed &a, Fixed b) {
-    return a = a - b;
-}
-
-Fixed &operator*=(Fixed &a, Fixed b) {
-    return a = a * b;
-}
-
-Fixed &operator/=(Fixed &a, Fixed b) {
-    return a = a / b;
-}
-
-Fixed operator-(Fixed x) {
-    return Fixed::from_raw(-x.v);
-}
-
-Fixed abs(Fixed x) {
-    if (x.v < 0) {
-        x.v = -x.v;
-    }
-    return x;
-}
-
-ostream &operator<<(ostream &out, Fixed x) {
+template <int N, int K>
+ostream &operator<<(ostream &out, Fixed<N, K> x) {
     return out << x.v / (double) (1 << 16);
 }
-
-Fixed rho[256];
-
-Fixed p[N][M]{}, old_p[N][M];
 
 template <typename T, size_t N, size_t M>
 struct VectorField {
@@ -464,7 +477,7 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
 
 
 int main() {
-    FluidSimulator<Fixed, N, M> simulator;
+    FluidSimulator<Fixed<32, 16>, N, M> simulator;
     simulator.run_simulation(T);
 
     return 0;
