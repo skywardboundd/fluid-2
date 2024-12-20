@@ -123,14 +123,37 @@ public:
     constexpr auto operator<=>(const Fixed& other) const = default;
 
 private:
-    int64_t value; // Внутреннее представление
+    int64_t value; 
 };
+
+
+#ifdef FLOAT
+#error "FLOAT is already defined"
+#endif
+#ifdef DOUBLE
+#error "DOUBLE is already defined"
+#endif
+#ifdef FIXED
+#error "FIXED is already defined"
+#endif
+#ifdef FAST_FIXED
+#error "FAST_FIXED is already defined"
+#endif
+#ifdef S
+#error "S is defined"
+#endif
+
+#define FLOAT            float
+#define DOUBLE           double
+#define FAST_FIXED(N, K) types::FastFixed<N, K>
+#define FIXED(N, K)      types::Fixed<N, K>
+
 
 
 template <int N, int K>
 std::ostream& operator<<(std::ostream& os, const Fixed<N, K>& f) {
     return os << f.to_double();
-}
+}   
 
 template <int N, int K>
 constexpr Fixed<N, K> inf = Fixed<N, K>::from_raw(std::numeric_limits<int64_t>::max());
