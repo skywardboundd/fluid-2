@@ -135,13 +135,14 @@ Fixed rho[256];
 
 Fixed p[N][M]{}, old_p[N][M];
 
+template <typename T, size_t N, size_t M>
 struct VectorField {
-    array<Fixed, deltas.size()> v[N][M];
-    Fixed &add(int x, int y, int dx, int dy, Fixed dv) {
+    array<T, deltas.size()> v[N][M];
+    T &add(int x, int y, int dx, int dy, T dv) {
         return get(x, y, dx, dy) += dv;
     }
 
-    Fixed &get(int x, int y, int dx, int dy) {
+    T &get(int x, int y, int dx, int dy) {
         size_t i = ranges::find(deltas, pair(dx, dy)) - deltas.begin();
         assert(i < deltas.size());
         return v[x][y][i];
@@ -149,31 +150,36 @@ struct VectorField {
 };
 
 
+
+template <typename T, size_t N, size_t M>
 class FluidSimulator {
 public:
-    FluidSimulator(); 
-    void run_simulation(size_t steps); 
+    FluidSimulator();
+    void run_simulation(size_t steps);
 
 private:
     char field[N][M + 1];
     int dirs[N][M]{};
-    Fixed p[N][M]{}, old_p[N][M];
-    VectorField velocity{}, velocity_flow{};
-    Fixed rho[256];
+    T p[N][M]{}, old_p[N][M];
+    VectorField<T, N, M> velocity{}, velocity_flow{};
+    T rho[256];
     int last_use[N][M]{};
     int UT = 0;
 
-    tuple<Fixed, bool, pair<int, int>> propagate_flow(int x, int y, Fixed lim);
-    bool propagate_move(int x, int y, bool is_first);
-    Fixed move_prob(int x, int y);
-    void propagate_stop(int x, int y, bool force);
+    tuple<T, bool, pair<int, int>> propagate_flow(int x, int y, T lim);
+    T random01();
+    bool propagate_move(int x, int y, bool is_first=false);
+    T move_prob(int x, int y);
+    void propagate_stop(int x, int y, bool force=false);
 };
+
 
 mt19937 rnd(1337);
 
-FluidSimulator::FluidSimulator() {
-    rho[' '] = 0.01;
-    rho['.'] = 1000;
+template <typename T, size_t N, size_t M>
+FluidSimulator<T, N, M>::FluidSimulator() {
+    rho[' '] = T(0.01);
+    rho['.'] = T(1000);
 
     memcpy(field, t_field, sizeof(t_field));
 
@@ -182,9 +188,10 @@ FluidSimulator::FluidSimulator() {
 }
 
 
-tuple<Fixed, bool, pair<int, int>> FluidSimulator::propagate_flow(int x, int y, Fixed lim) {
+template <typename T, size_t N, size_t M>
+tuple<T, bool, pair<int, int>> FluidSimulator<T, N, M>::propagate_flow(int x, int y, T lim) {
     last_use[x][y] = UT - 1;
-    Fixed ret = 0;
+    T ret = 0;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
         if (field[nx][ny] != '#' && last_use[nx][ny] < UT) {
@@ -193,12 +200,10 @@ tuple<Fixed, bool, pair<int, int>> FluidSimulator::propagate_flow(int x, int y, 
             if (flow == cap) {
                 continue;
             }
-            // assert(v >= velocity_flow.get(x, y, dx, dy));
             auto vp = min(lim, cap - flow);
             if (last_use[nx][ny] == UT - 1) {
                 velocity_flow.add(x, y, dx, dy, vp);
                 last_use[x][y] = UT;
-                // cerr << x << " " << y << " -> " << nx << " " << ny << " " << vp << " / " << lim << "\n";
                 return {vp, 1, {nx, ny}};
             }
             auto [t, prop, end] = propagate_flow(nx, ny, vp);
@@ -206,7 +211,6 @@ tuple<Fixed, bool, pair<int, int>> FluidSimulator::propagate_flow(int x, int y, 
             if (prop) {
                 velocity_flow.add(x, y, dx, dy, t);
                 last_use[x][y] = UT;
-                // cerr << x << " " << y << " -> " << nx << " " << ny << " " << t << " / " << lim << "\n";
                 return {t, prop && end != pair(x, y), end};
             }
         }
@@ -215,11 +219,13 @@ tuple<Fixed, bool, pair<int, int>> FluidSimulator::propagate_flow(int x, int y, 
     return {ret, 0, {0, 0}};
 }
 
-Fixed random01() {
-    return Fixed::from_raw((rnd() & ((1 << 16) - 1)));
+template <typename T, size_t N, size_t M>
+T FluidSimulator<T, N, M>::random01() {
+    return T::from_raw((rnd() & ((1 << 16) - 1)));
 }
 
-void FluidSimulator::propagate_stop(int x, int y, bool force = false) {
+template <typename T, size_t N, size_t M>
+void FluidSimulator<T, N, M>::propagate_stop(int x, int y, bool force) {
     if (!force) {
         bool stop = true;
         for (auto [dx, dy] : deltas) {
@@ -243,8 +249,9 @@ void FluidSimulator::propagate_stop(int x, int y, bool force = false) {
     }
 }
 
-Fixed FluidSimulator::move_prob(int x, int y) {
-    Fixed sum = 0;
+template <typename T, size_t N, size_t M>
+T FluidSimulator<T, N, M>::move_prob(int x, int y) {
+    T sum = 0;
     for (size_t i = 0; i < deltas.size(); ++i) {
         auto [dx, dy] = deltas[i];
         int nx = x + dx, ny = y + dy;
@@ -260,25 +267,27 @@ Fixed FluidSimulator::move_prob(int x, int y) {
     return sum;
 }
 
+template <typename T, size_t N, size_t M>
 struct ParticleParams {
     char type;
-    Fixed cur_p;
-    array<Fixed, deltas.size()> v;
+    T cur_p;
+    array<T, deltas.size()> v;
 
-    void swap_with(int x, int y, char field[N][M + 1], Fixed p[N][M], VectorField &velocity) {
+    void swap_with(int x, int y, char field[N][M + 1], T p[N][M], VectorField<T, N, M> &velocity) {
         swap(field[x][y], type);
         swap(p[x][y], cur_p);
         swap(velocity.v[x][y], v);
     }
 };
 
-bool FluidSimulator::propagate_move(int x, int y, bool is_first) {
+template <typename T, size_t N, size_t M>
+bool FluidSimulator<T, N, M>::propagate_move(int x, int y, bool is_first) {
     last_use[x][y] = UT - is_first;
     bool ret = false;
     int nx = -1, ny = -1;
     do {
-        std::array<Fixed, deltas.size()> tres;
-        Fixed sum = 0;
+        std::array<T, deltas.size()> tres;
+        T sum = 0;
         for (size_t i = 0; i < deltas.size(); ++i) {
             auto [dx, dy] = deltas[i];
             int nx = x + dx, ny = y + dy;
@@ -299,7 +308,7 @@ bool FluidSimulator::propagate_move(int x, int y, bool is_first) {
             break;
         }
 
-        Fixed p = random01() * sum;
+        T p = random01() * sum;
         size_t d = std::ranges::upper_bound(tres, p) - tres.begin();
 
         auto [dx, dy] = deltas[d];
@@ -319,7 +328,7 @@ bool FluidSimulator::propagate_move(int x, int y, bool is_first) {
     }
     if (ret) {
         if (!is_first) {
-            ParticleParams pp{};
+            ParticleParams<T, N, M> pp{};
             pp.swap_with(x, y, this->field, this->p, this->velocity);
             pp.swap_with(nx, ny, this->field, this->p, this->velocity);
             pp.swap_with(x, y, this->field, this->p, this->velocity);
@@ -329,10 +338,12 @@ bool FluidSimulator::propagate_move(int x, int y, bool is_first) {
     return ret;
 }
 
-void FluidSimulator::run_simulation(size_t steps) {
+
+template <typename T, size_t N, size_t M>
+void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
     rho[' '] = 0.01;
     rho['.'] = 1000;
-    Fixed g = 0.1;
+    T g = 0.1;
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
@@ -346,7 +357,7 @@ void FluidSimulator::run_simulation(size_t steps) {
 
     for (size_t i = 0; i < steps; ++i) {
         
-        Fixed total_delta_p = 0;
+        T total_delta_p = 0;
         // Apply external forces
         for (size_t x = 0; x < N; ++x) {
             for (size_t y = 0; y < M; ++y) {
@@ -453,7 +464,8 @@ void FluidSimulator::run_simulation(size_t steps) {
 
 
 int main() {
-    FluidSimulator simulator;
+    FluidSimulator<Fixed, N, M> simulator;
     simulator.run_simulation(T);
+
     return 0;
 }
