@@ -26,3 +26,11 @@ Simulation completed in: 7.79796 seconds
 
 Без замены: 
 Simulation completed in: 7.97915 seconds
+
+## Распаралеливание dfs
+
+С заменой:
+Simulation completed in: 2.22334 seconds
+
+Без замены:
+Simulation completed in: 7.79796 seconds
