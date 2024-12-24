@@ -4,7 +4,7 @@ using namespace std;
 
 constexpr size_t N = 36, M = 84;
 // constexpr size_t N = 14, M = 5;
-constexpr size_t T = 1'000'000;
+constexpr size_t T = 1'000;
 constexpr std::array<pair<int, int>, 4> deltas{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}};
 
 constexpr size_t s_N = 32, s_K = 16;
@@ -179,8 +179,10 @@ struct VectorField {
     }
 
     T &get(int x, int y, int dx, int dy) {
-        size_t i = ranges::find(deltas, pair(dx, dy)) - deltas.begin();
-        assert(i < deltas.size());
+        size_t i = 0;
+        if(dx == 1 && dy == 0) i = 1;
+        else if (dx == 0 && dy == -1) i = 2;
+        else if (dx == 0 && dy == 1) i = 3;
         return v[x][y][i];
     }
 };
@@ -498,10 +500,19 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
     }
 }
 
+#include <chrono>
 
 int main() {
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     FluidSimulator<Fixed<32, 16>, N, M> simulator;
     simulator.run_simulation(T);
 
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end_time - start_time;
+    std::cout << "Simulation completed in: " << elapsed.count() << " seconds\n";
+    
     return 0;
 }
