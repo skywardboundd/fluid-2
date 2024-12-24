@@ -9,6 +9,7 @@ constexpr std::array<pair<int, int>, 4> deltas{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}
 
 constexpr size_t s_N = 32, s_K = 16;
 
+size_t THREADS = 4;
 // char field[N][M + 1] = {
 //     "#####",
 //     "#.  #",
@@ -376,22 +377,50 @@ bool FluidSimulator<T, N, M>::propagate_move(int x, int y, bool is_first) {
     return ret;
 }
 
+#include<thread>
 
 template <typename T, size_t N, size_t M>
 void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
     rho[' '] = 0.01;
     rho['.'] = 1000;
-    T g = 0.1;
+    T g = 9.8;
 
-    for (size_t x = 0; x < N; ++x) {
-        for (size_t y = 0; y < M; ++y) {
-            if (field[x][y] == '#')
-                continue;
-            for (auto [dx, dy] : deltas) {
-                dirs[x][y] += (field[x + dx][y + dy] != '#');
+    auto f_dirs = [&](size_t n1, size_t n2) {
+        for (size_t x = n1; x < n2; ++x) {
+            for (size_t y = 0; y < M; ++y) {
+                if (field[x][y] == '#')
+                    continue;
+                for (auto [dx, dy] : deltas) {
+                    dirs[x][y] += (field[x + dx][y + dy] != '#');
+                }
             }
         }
+        
+    };
+
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < THREADS; ++i) {
+        size_t j = N / THREADS + 1;
+        size_t n1 = i * j;
+        size_t n2 = n1 + j;
+        threads.emplace_back(f_dirs, n1, n2);
     }
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
+
+    // for (size_t x = 0; x < N; ++x) {
+    //     for (size_t y = 0; y < M; ++y) {
+    //         if (field[x][y] == '#')
+    //             continue;
+    //         for (auto [dx, dy] : deltas) {
+    //             dirs[x][y] += (field[x + dx][y + dy] != '#');
+    //         }
+    //     }
+    // }
+
+    
 
     for (size_t i = 0; i < steps; ++i) {
         
@@ -501,6 +530,7 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
 }
 
 #include <chrono>
+#include <thread>
 
 int main() {
 
