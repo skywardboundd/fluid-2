@@ -19,3 +19,10 @@ Simulation completed in: 7.97915 seconds
 
 До этого:
 Simulation completed in: 56.158 seconds
+
+## Добавление потоков для velocity внутри цикла
+С заменой:
+Simulation completed in: 7.79796 seconds
+
+Без замены: 
+Simulation completed in: 7.97915 seconds

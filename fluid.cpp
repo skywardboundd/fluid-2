@@ -426,14 +426,32 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
         
         T total_delta_p = 0;
         // Apply external forces
-        for (size_t x = 0; x < N; ++x) {
-            for (size_t y = 0; y < M; ++y) {
-                if (field[x][y] == '#')
-                    continue;
-                if (field[x + 1][y] != '#')
-                    velocity.add(x, y, 1, 0, g);
+
+        std::vector<std::thread> threads;
+        auto f_vel = [&](size_t n1, size_t n2){
+            for (size_t x = n1; x < n2 && x < N; ++x) {
+                for (size_t y = 0; y < M; ++y) {
+                    if (field[x][y] == '#')
+                        continue;
+                    if (field[x + 1][y] != '#')
+                        velocity.add(x, y, 1, 0, g);
+                }
             }
+        };
+
+
+        for (size_t i = 0; i < THREADS; ++i) {
+            size_t j = N / THREADS + 1;
+            size_t n1 = i * j;
+            size_t n2 = n1 + j;
+            threads.emplace_back(f_vel, n1, n2);
         }
+
+        for (auto &thread : threads) {
+            thread.join();
+        }
+        threads.clear();
+
 
         // Apply forces from p
         memcpy(old_p, p, sizeof(p));
