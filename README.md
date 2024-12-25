@@ -36,5 +36,11 @@ Simulation completed in: 2.22334 seconds
 Simulation completed in: 7.79796 seconds
 
 ## Добавил тред пул 
+С тредпулом:
+Simulation completed in: 4.38357 seconds
 
-Время особо не поменялось, но код стал чище :)
+
+Без него: 
+Simulation completed in: 7.79796 seconds
+
+## Добавил лямбда функццмю, которая принимает другие лямбда функции для чистоты кода (add_to_pool)
