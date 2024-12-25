@@ -11,7 +11,7 @@ Simulation completed in: 185.454 seconds
 Без замены 
 Simulation completed in: 678.596 seconds
 
-# Перешел на g = 9.8
+# Перешел на g = 9.8, T = 1'000
 
 ## Добавление потоков для составления dirs
 С заменой:
