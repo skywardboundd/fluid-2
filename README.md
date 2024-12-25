@@ -34,3 +34,7 @@ Simulation completed in: 2.22334 seconds
 
 Без замены:
 Simulation completed in: 7.79796 seconds
+
+## Добавил тред пул 
+
+Время особо не поменялось, но код стал чище :)

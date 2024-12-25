@@ -1,6 +1,9 @@
 #include <bits/stdc++.h>
+#include "thread_pool.cpp"
+
 
 using namespace std;
+
 
 constexpr size_t N = 36, M = 84;
 // constexpr size_t N = 14, M = 5;
@@ -9,7 +12,8 @@ constexpr std::array<pair<int, int>, 4> deltas{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}
 
 constexpr size_t s_N = 32, s_K = 16;
 
-size_t THREADS = 16;
+size_t THREADS = 4;
+ThreadPool pool(THREADS);
 // char field[N][M + 1] = {
 //     "#####",
 //     "#.  #",
@@ -398,17 +402,17 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
         
     };
 
-    std::vector<std::thread> threads;
+    // std::vector<std::thread> threads;
     for (size_t i = 0; i < THREADS; ++i) {
         size_t j = N / THREADS + 1;
         size_t n1 = i * j;
         size_t n2 = n1 + j;
-        threads.emplace_back(f_dirs, n1, n2);
+        pool.enqueue(f_dirs, n1, n2);
     }
 
-    for (auto &thread : threads) {
-        thread.join();
-    }
+    // for (auto &thread : threads) {
+    //     thread.join();
+    // }
 
     // for (size_t x = 0; x < N; ++x) {
     //     for (size_t y = 0; y < M; ++y) {
@@ -527,33 +531,46 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
         prop = false;
 
 
-        auto f_prop_move = [&](size_t n1, size_t n2){
-            for (size_t x = n1; x < N && x < n2; ++x) {
-                for (size_t y = 0; y < M; ++y) {
-                    if (field[x][y] != '#' && last_use[x][y] != UT) {
-                        if (random01() < move_prob(x, y)) {
-                            prop = true;
-                            propagate_move(x, y, true);
-                        } else {
-                            propagate_stop(x, y, true);
-                        }
+        // auto f_prop_move = [&](size_t n1, size_t n2){
+        //     for (size_t x = n1; x < N && x < n2; ++x) {
+        //         for (size_t y = 0; y < M; ++y) {
+        //             if (field[x][y] != '#' && last_use[x][y] != UT) {
+        //                 if (random01() < move_prob(x, y)) {
+        //                     prop = true;
+        //                     propagate_move(x, y, true);
+        //                 } else {
+        //                     propagate_stop(x, y, true);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // };
+
+
+        // for (size_t i = 0; i < THREADS; ++i) {
+        //     size_t j = N / THREADS + 1;
+        //     size_t n1 = i * j;
+        //     size_t n2 = n1 + j;
+        //     threads.emplace_back(f_prop_move, n1, n2);
+        // }
+
+        // for (auto &thread : threads) {
+        //     thread.join();
+        // }
+        // threads.clear();
+
+        for (size_t x = 0; x < N; ++x) {
+            for (size_t y = 0; y < M; ++y) {
+                if (field[x][y] != '#' && last_use[x][y] != UT) {
+                    if (random01() < move_prob(x, y)) {
+                        prop = true;
+                        propagate_move(x, y, true);
+                    } else {
+                        propagate_stop(x, y, true);
                     }
                 }
             }
-        };
-
-
-        for (size_t i = 0; i < THREADS; ++i) {
-            size_t j = N / THREADS + 1;
-            size_t n1 = i * j;
-            size_t n2 = n1 + j;
-            threads.emplace_back(f_prop_move, n1, n2);
         }
-
-        for (auto &thread : threads) {
-            thread.join();
-        }
-        threads.clear();
 
 
         if (prop) {
