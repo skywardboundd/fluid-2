@@ -1,7 +1,6 @@
 Usage:
 
-clang++ fluid.cpp -o fluid -std=c++20
-
+clang++ fluid.cpp -o fluid -std=c++20 -DTHREADS=12
 
 ## замена find на 4 ифа ( у нас всего 4 элемента)
 

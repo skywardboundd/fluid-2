@@ -12,7 +12,8 @@ constexpr std::array<pair<int, int>, 4> deltas{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}
 
 constexpr size_t s_N = 32, s_K = 16;
 
-size_t THREADS = 12;
+#define THREADS 12
+
 ThreadPool pool(THREADS);
 // char field[N][M + 1] = {
 //     "#####",
@@ -522,7 +523,8 @@ void FluidSimulator<T, N, M>::run_simulation(size_t steps) {
         //     }
         // };
 
-
+        // add_to_pool(f_prop_move);
+        
         // for (size_t i = 0; i < THREADS; ++i) {
         //     size_t j = N / THREADS + 1;
         //     size_t n1 = i * j;
